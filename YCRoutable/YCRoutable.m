@@ -272,10 +272,7 @@
                                                   completion:nil];
         }
         else {
-            UINavigationController *navigationController = [[UINavigationController alloc] initWithRootViewController:controller];
-            navigationController.modalPresentationStyle = controller.modalPresentationStyle;
-            navigationController.modalTransitionStyle = controller.modalTransitionStyle;
-            [self.navigationController presentViewController:navigationController
+            [self.navigationController presentViewController:controller
                                                     animated:animated
                                                   completion:nil];
         }
@@ -405,8 +402,8 @@
     }
     
     controller.modalTransitionStyle = params.routerOptions.transitionStyle;
-    controller.modalPresentationStyle = params.routerOptions.presentationStyle;
     return controller;
 }
 
 @end
+
