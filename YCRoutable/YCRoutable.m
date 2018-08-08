@@ -69,13 +69,16 @@
                                    transitionStyle: (UIModalTransitionStyle)transitionStyle
                                      defaultParams: (NSDictionary *)defaultParams
                                             isRoot: (BOOL)isRoot
-                                           isModal: (BOOL)isModal {
+                                           isModal: (BOOL)isModal
+                                        launchMode: (UILaunchMode)launchMode
+{
     UPRouterOptions *options = [[UPRouterOptions alloc] init];
     options.presentationStyle = presentationStyle;
     options.transitionStyle = transitionStyle;
     options.defaultParams = defaultParams;
     options.shouldOpenAsRootViewController = isRoot;
     options.modal = isModal;
+    options.launchMode = launchMode;
     return options;
 }
 //Default construction; like [NSArray array]
@@ -84,47 +87,66 @@
                                     transitionStyle:UIModalTransitionStyleCoverVertical
                                       defaultParams:nil
                                              isRoot:NO
-                                            isModal:NO];
+                                            isModal:NO
+                                         launchMode:UILaunchStandard];
 }
 
 //Custom class constructors, with heavier Objective-C accent
++ (instancetype)routerOptionsAsSingleTask {
+
+    return [self routerOptionsWithPresentationStyle:UIModalPresentationNone
+                                    transitionStyle:UIModalTransitionStyleCoverVertical
+                                      defaultParams:nil
+                                             isRoot:NO
+                                            isModal:NO
+                                         launchMode:UILaunchSingleTask];
+}
+
 + (instancetype)routerOptionsAsModal {
     return [self routerOptionsWithPresentationStyle:UIModalPresentationNone
                                     transitionStyle:UIModalTransitionStyleCoverVertical
                                       defaultParams:nil
                                              isRoot:NO
-                                            isModal:YES];
+                                            isModal:YES
+                                         launchMode:UILaunchStandard];
 }
 + (instancetype)routerOptionsWithPresentationStyle:(UIModalPresentationStyle)style {
     return [self routerOptionsWithPresentationStyle:style
                                     transitionStyle:UIModalTransitionStyleCoverVertical
                                       defaultParams:nil
                                              isRoot:NO
-                                            isModal:NO];
+                                            isModal:NO
+                                         launchMode:UILaunchStandard];
 }
 + (instancetype)routerOptionsWithTransitionStyle:(UIModalTransitionStyle)style {
     return [self routerOptionsWithPresentationStyle:UIModalPresentationNone
                                     transitionStyle:style
                                       defaultParams:nil
                                              isRoot:NO
-                                            isModal:NO];
+                                            isModal:NO
+                                         launchMode:UILaunchStandard];
 }
 + (instancetype)routerOptionsForDefaultParams:(NSDictionary *)defaultParams {
     return [self routerOptionsWithPresentationStyle:UIModalPresentationNone
                                     transitionStyle:UIModalTransitionStyleCoverVertical
                                       defaultParams:defaultParams
                                              isRoot:NO
-                                            isModal:NO];
+                                            isModal:NO
+                                         launchMode:UILaunchStandard];
 }
 + (instancetype)routerOptionsAsRoot {
     return [self routerOptionsWithPresentationStyle:UIModalPresentationNone
                                     transitionStyle:UIModalTransitionStyleCoverVertical
                                       defaultParams:nil
                                              isRoot:YES
-                                            isModal:NO];
+                                            isModal:NO
+                                         launchMode:UILaunchStandard];
 }
 
 //Exposed methods previously supported
++ (instancetype)singleTask {
+    return [self routerOptionsAsSingleTask];
+}
 + (instancetype)modal {
     return [self routerOptionsAsModal];
 }
@@ -281,6 +303,18 @@
         [self.navigationController setViewControllers:@[controller] animated:animated];
     }
     else {
+        
+        if(options.launchMode == UILaunchSingleTask) {
+            for(UIViewController *childVC in self.navigationController.viewControllers) {
+                NSString *nameOfChildVC  = [NSString stringWithUTF8String:object_getClassName(childVC)];
+                NSString *nameOfTargetVC = [NSString stringWithUTF8String:object_getClassName(controller)];
+                if([nameOfChildVC isEqualToString:nameOfTargetVC]){
+                    [self.navigationController popToViewController:childVC animated:YES];
+                    return;
+                }
+            }
+        }
+
         [self.navigationController pushViewController:controller animated:animated];
     }
 }

@@ -9,6 +9,11 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
+typedef NS_ENUM(NSInteger, UILaunchMode) {
+    UILaunchStandard = 0,
+    UILaunchSingleTask
+};
+
 @class UPRouter;
 
 /**
@@ -59,7 +64,8 @@ typedef void (^RouterOpenCallback)(NSDictionary *params);
                                    transitionStyle: (UIModalTransitionStyle)transitionStyle
                                      defaultParams: (NSDictionary *)defaultParams
                                             isRoot: (BOOL)isRoot
-                                           isModal: (BOOL)isModal;
+                                           isModal: (BOOL)isModal
+                                        launchMode: (UILaunchMode)launchMode;
 /**
  @return A new instance of `UPRouterOptions` with its properties set to default
  */
@@ -122,6 +128,8 @@ typedef void (^RouterOpenCallback)(NSDictionary *params);
  */
 + (instancetype)root;
 
+
++ (instancetype)singleTask;
 /**
  @remarks not idiomatic objective-c naming; overrides getter to wrap around setter
  @return The same instance of `UPRouterOptions`, setting a modal presentation format.
@@ -171,6 +179,10 @@ typedef void (^RouterOpenCallback)(NSDictionary *params);
  Default parameters sent to the `UIViewController`'s initWithRouterParams: method. This is useful if you want to pass some non-`NSString` information. These parameters will be overwritten by any parameters passed in the URL in open:.
  */
 @property (readwrite, nonatomic, strong) NSDictionary *defaultParams;
+/**
+ The property determining the `UIModalTransitionStyle` assigned to the mapped `UIViewController` instance. This is always assigned, regardless of whether or not `modal` is true.
+ */
+@property (readwrite, nonatomic) UILaunchMode launchMode;
 /**
  The property determining if the mapped `UIViewController` instance should be set as the root view controller of the router's `UINavigationController` instance.
  */
