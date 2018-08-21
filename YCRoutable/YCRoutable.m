@@ -354,13 +354,14 @@
         return [self.cachedRoutes objectForKey:url];
     }
     
-    NSArray *givenParts = url.pathComponents;
-    NSArray *legacyParts = [url componentsSeparatedByString:@"/"];
+    NSArray *givenParts  = [url componentsSeparatedByString:@"/"];
+    NSArray *legacyParts = url.pathComponents;
+
     if ([legacyParts count] != [givenParts count]) {
         NSLog(@"Routable Warning - your URL %@ has empty path components - this will throw an error in an upcoming release", url);
         givenParts = legacyParts;
     }
-    
+
     __block RouterParams *openParams = nil;
     [self.routes enumerateKeysAndObjectsUsingBlock:
      ^(NSString *routerUrl, UPRouterOptions *routerOptions, BOOL *stop) {
@@ -379,6 +380,14 @@
     if (!openParams) {
         if (_ignoresExceptions) {
             return nil;
+        } else if (_notFoundPage) {
+            UPRouterOptions *redirectOptions = [UPRouterOptions routerOptions];
+            redirectOptions.openClass        = _notFoundPage;
+            
+            RouterParams *redirectParams = [[RouterParams alloc] initWithRouterOptions:redirectOptions
+                                                                            openParams:nil
+                                                                           extraParams: nil];
+            return redirectParams;
         }
         @throw [NSException exceptionWithName:@"RouteNotFoundException"
                                        reason:[NSString stringWithFormat:ROUTE_NOT_FOUND_FORMAT, url]
