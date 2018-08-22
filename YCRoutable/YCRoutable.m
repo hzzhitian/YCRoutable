@@ -93,7 +93,7 @@
 
 //Custom class constructors, with heavier Objective-C accent
 + (instancetype)routerOptionsAsSingleTask {
-
+    
     return [self routerOptionsWithPresentationStyle:UIModalPresentationNone
                                     transitionStyle:UIModalTransitionStyleCoverVertical
                                       defaultParams:nil
@@ -242,7 +242,7 @@
     if (!options) {
         options = [UPRouterOptions routerOptions];
     }
-    options.openClass = controllerClass;
+    options.openClass = NSClassFromString([NSString stringWithFormat:@"%@PageController",format]);
     [self.routes setObject:options forKey:format];
 }
 
@@ -314,7 +314,7 @@
                 }
             }
         }
-
+        
         [self.navigationController pushViewController:controller animated:animated];
     }
 }
@@ -350,32 +350,31 @@
                                      userInfo:nil];
     }
     
-    if ([self.cachedRoutes objectForKey:url] && !extraParams) {
-        return [self.cachedRoutes objectForKey:url];
+    NSString *extractedPath  = [self extractPath:url];
+    
+    Class   openClass = NSClassFromString([NSString stringWithFormat:@"%@PageController",extractedPath]);
+    if(!openClass) {
+        //if we wait, caching this as key would throw an exception
+        if (_ignoresExceptions) {
+            return nil;
+        }
+        @throw [NSException exceptionWithName:@"RouteNotFoundException"
+                                       reason:[NSString stringWithFormat:ROUTE_NOT_FOUND_FORMAT, url]
+                                     userInfo:nil];
     }
     
-    NSArray *givenParts  = [url componentsSeparatedByString:@"/"];
-    NSArray *legacyParts = url.pathComponents;
-
-    if ([legacyParts count] != [givenParts count]) {
-        NSLog(@"Routable Warning - your URL %@ has empty path components - this will throw an error in an upcoming release", url);
-        givenParts = legacyParts;
+    RouterParams    *openParams     = nil;
+    UPRouterOptions *routerOptions  = nil;
+    
+    if([openClass respondsToSelector:@selector(routerOptions)]) {
+        routerOptions = [openClass performSelector:@selector(routerOptions)];
+    } else {
+        routerOptions = [UPRouterOptions routerOptions];
     }
-
-    __block RouterParams *openParams = nil;
-    [self.routes enumerateKeysAndObjectsUsingBlock:
-     ^(NSString *routerUrl, UPRouterOptions *routerOptions, BOOL *stop) {
-         
-         NSArray *routerParts = [routerUrl pathComponents];
-         if ([routerParts count] == [givenParts count]) {
-             
-             NSDictionary *givenParams = [self paramsForUrlComponents:givenParts routerUrlComponents:routerParts];
-             if (givenParams) {
-                 openParams = [[RouterParams alloc] initWithRouterOptions:routerOptions openParams:givenParams extraParams: extraParams];
-                 *stop = YES;
-             }
-         }
-     }];
+    
+    NSDictionary *givenParams = [self extractQueryParams:url];
+    routerOptions.openClass = NSClassFromString([NSString stringWithFormat:@"%@PageController",extractedPath]);
+    openParams = [[RouterParams alloc] initWithRouterOptions:routerOptions openParams:givenParams extraParams: extraParams];
     
     if (!openParams) {
         if (_ignoresExceptions) {
@@ -393,8 +392,38 @@
                                        reason:[NSString stringWithFormat:ROUTE_NOT_FOUND_FORMAT, url]
                                      userInfo:nil];
     }
-    [self.cachedRoutes setObject:openParams forKey:url];
+    
     return openParams;
+}
+
+- (NSString*)extractPath:(NSString*)url
+{
+    NSString *separatedPath = [url componentsSeparatedByString:@"?"][0];
+    
+    return [separatedPath stringByReplacingOccurrencesOfString:@"/" withString:@""];
+}
+
+- (NSDictionary*)extractQueryParams:(NSString*)url
+{
+    NSMutableDictionary *params = [[NSMutableDictionary alloc] init];
+    
+    // Extract Params From Query.
+    NSRange firstRange = [url rangeOfString:@"?"];
+    if (firstRange.location == NSNotFound && url.length <= firstRange.location + firstRange.length)
+        return nil;
+    
+    NSString *paramsString = [url substringFromIndex:firstRange.location + firstRange.length];
+    NSArray *paramStringArr = [paramsString componentsSeparatedByString:@"&"];
+    for (NSString *paramString in paramStringArr) {
+        NSArray *paramArr = [paramString componentsSeparatedByString:@"="];
+        if (paramArr.count > 1) {
+            NSString *key = [paramArr objectAtIndex:0];
+            NSString *value = [paramArr objectAtIndex:1];
+            params[key] = value;
+        }
+    }
+    
+    return params;
 }
 
 - (RouterParams *)routerParamsForUrl:(NSString *)url {
@@ -449,4 +478,3 @@
 }
 
 @end
-
