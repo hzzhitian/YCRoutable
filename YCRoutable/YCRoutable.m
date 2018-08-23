@@ -242,7 +242,7 @@
     if (!options) {
         options = [UPRouterOptions routerOptions];
     }
-    options.openClass = NSClassFromString([NSString stringWithFormat:@"%@PageController",format]);
+    options.openClass = controllerClass;
     [self.routes setObject:options forKey:format];
 }
 
@@ -352,29 +352,17 @@
     
     NSString *extractedPath  = [self extractPath:url];
     
-    Class   openClass = NSClassFromString([NSString stringWithFormat:@"%@PageController",extractedPath]);
-    if(!openClass) {
-        //if we wait, caching this as key would throw an exception
-        if (_ignoresExceptions) {
-            return nil;
-        }
-        @throw [NSException exceptionWithName:@"RouteNotFoundException"
-                                       reason:[NSString stringWithFormat:ROUTE_NOT_FOUND_FORMAT, url]
-                                     userInfo:nil];
-    }
-    
-    RouterParams    *openParams     = nil;
-    UPRouterOptions *routerOptions  = nil;
-    
-    if([openClass respondsToSelector:@selector(routerOptions)]) {
-        routerOptions = [openClass performSelector:@selector(routerOptions)];
-    } else {
-        routerOptions = [UPRouterOptions routerOptions];
-    }
-    
-    NSDictionary *givenParams = [self extractQueryParams:url];
-    routerOptions.openClass = NSClassFromString([NSString stringWithFormat:@"%@PageController",extractedPath]);
-    openParams = [[RouterParams alloc] initWithRouterOptions:routerOptions openParams:givenParams extraParams: extraParams];
+    __block RouterParams *openParams = nil;
+    [self.routes enumerateKeysAndObjectsUsingBlock:
+     ^(NSString *routerUrl, UPRouterOptions *routerOptions, BOOL *stop) {
+         
+         if ([extractedPath isEqualToString:routerUrl]) {
+             
+             NSDictionary *givenParams = [self extractQueryParams:url];
+             openParams = [[RouterParams alloc] initWithRouterOptions:routerOptions openParams:givenParams extraParams: extraParams];
+             *stop = YES;
+         }
+     }];
     
     if (!openParams) {
         if (_ignoresExceptions) {
@@ -478,3 +466,4 @@
 }
 
 @end
+
