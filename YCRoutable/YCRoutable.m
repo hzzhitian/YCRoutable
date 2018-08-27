@@ -60,6 +60,7 @@
 
 @property (readwrite, nonatomic, strong) Class openClass;
 @property (readwrite, nonatomic, copy) RouterOpenCallback callback;
+@property (readwrite, nonatomic, strong) NSArray *checkList;
 @end
 
 @implementation UPRouterOptions
@@ -191,6 +192,11 @@
 // Map of URL format NSString -> RouterOptions
 // i.e. "users/:id"
 @property (readwrite, nonatomic, strong) NSMutableDictionary *routes;
+
+// Map of URL format NSString -> RouterOptions
+// i.e. "users/:id"
+@property (readwrite, nonatomic, strong) NSMutableDictionary *checks;
+
 // Map of final URL NSStrings -> RouterParams
 // i.e. "users/16"
 @property (readwrite, nonatomic, strong) NSMutableDictionary *cachedRoutes;
@@ -205,6 +211,7 @@
 - (id)init {
     if ((self = [super init])) {
         self.routes = [NSMutableDictionary dictionary];
+        self.checks = [NSMutableDictionary dictionary];
         self.cachedRoutes = [NSMutableDictionary dictionary];
     }
     return self;
@@ -229,10 +236,14 @@
 }
 
 - (void)map:(NSString *)format toController:(Class)controllerClass {
-    [self map:format toController:controllerClass withOptions:nil];
+    [self map:format toController:controllerClass withOptions:nil andCheckList:nil];
 }
 
-- (void)map:(NSString *)format toController:(Class)controllerClass withOptions:(UPRouterOptions *)options {
+- (void)map:(NSString *)format
+toController:(Class)controllerClass
+withOptions:(UPRouterOptions *)options
+andCheckList:(NSArray*)checkList
+{
     if (!format) {
         @throw [NSException exceptionWithName:@"RouteNotProvided"
                                        reason:@"Route #format is not initialized"
@@ -242,8 +253,30 @@
     if (!options) {
         options = [UPRouterOptions routerOptions];
     }
+    
     options.openClass = controllerClass;
+    options.checkList = checkList;
+    
     [self.routes setObject:options forKey:format];
+}
+
+- (void)checkMap:(NSString *)name
+    toController:(Class)controllerClass
+     withOptions:(UPRouterOptions *)options
+{
+    if (!name) {
+        @throw [NSException exceptionWithName:@"RouteNotProvided"
+                                       reason:@"Route #format is not initialized"
+                                     userInfo:nil];
+        return;
+    }
+    if (!options) {
+        options = [UPRouterOptions routerOptions];
+    }
+    
+    options.openClass = controllerClass;
+    
+    [self.checks setObject:options forKey:name];
 }
 
 - (void)openExternal:(NSString *)url {
@@ -339,6 +372,40 @@
 }
 
 ///////
+- (RouterParams *)checkForList:(NSArray *)checkList withTargetUrl:(NSString*)targetUrl extraParams:(NSDictionary*)extraParams
+{
+    if(!checkList)
+        return nil;
+    
+    for(NSString *itemKey in checkList) {
+        UPRouterOptions *checkOptions = self.checks[itemKey];
+        
+        if(!checkOptions)
+            continue;
+        
+        id checkRlt = [checkOptions.openClass performSelector:NSSelectorFromString(itemKey)];
+        
+        if([checkRlt boolValue]) {
+            continue;
+        } else {
+            
+            NSDictionary *givenParams = @{@"suc_route_block":^{
+                [[YCRoutable sharedRouter] open:targetUrl
+                                       animated:YES
+                                    extraParams:extraParams];
+            }};
+            
+            RouterParams *openParams = [[RouterParams alloc] initWithRouterOptions:checkOptions
+                                                                        openParams:givenParams
+                                                                       extraParams:nil];
+            return openParams;
+        }
+        
+    }
+    
+    return nil;
+}
+
 - (RouterParams *)routerParamsForUrl:(NSString *)url extraParams: (NSDictionary *)extraParams {
     if (!url) {
         //if we wait, caching this as key would throw an exception
@@ -358,8 +425,18 @@
          
          if ([extractedPath isEqualToString:routerUrl]) {
              
-             NSDictionary *givenParams = [self extractQueryParams:url];
-             openParams = [[RouterParams alloc] initWithRouterOptions:routerOptions openParams:givenParams extraParams: extraParams];
+             RouterParams *checkParams = [self checkForList:routerOptions.checkList
+                                              withTargetUrl:url
+                                                extraParams:extraParams];
+             if(checkParams){
+                 openParams = checkParams;
+                 
+             } else {
+                 NSDictionary *givenParams = [self extractQueryParams:url];
+                 openParams = [[RouterParams alloc] initWithRouterOptions:routerOptions openParams:givenParams extraParams: extraParams];
+                 
+             }
+             
              *stop = YES;
          }
      }];

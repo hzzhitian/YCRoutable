@@ -1,5 +1,5 @@
 Pod::Spec.new do |s|
-version = "0.3.2"
+version = "0.3.3"
 s.name         = "YCRoutable"
 s.version      = version
 s.summary      = "A native in-app URL router for iOS."

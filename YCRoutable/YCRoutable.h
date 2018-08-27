@@ -298,8 +298,10 @@ typedef void (^RouterOpenCallback)(NSDictionary *params);
  @param controllerClass The `UIViewController` `Class` which will be instanstiated when the URL is triggered in `open:`
  @param options Configuration for the route, such as modal settings
  */
-- (void)map:(NSString *)format toController:(Class)controllerClass withOptions:(UPRouterOptions *)options;
+- (void)map:(NSString *)format toController:(Class)controllerClass withOptions:(UPRouterOptions *)options andCheckList:(NSArray*)checkList;
 
+
+- (void)checkMap:(NSString *)name toController:(Class)controllerClass withOptions:(UPRouterOptions *)options;
 ///-------------------------------
 /// @name Opening URLs
 ///-------------------------------
@@ -364,3 +366,4 @@ typedef void (^RouterOpenCallback)(NSDictionary *params);
 + (instancetype)newRouter;
 
 @end
+
