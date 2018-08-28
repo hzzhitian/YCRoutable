@@ -302,6 +302,9 @@ typedef void (^RouterOpenCallback)(NSDictionary *params);
 
 
 - (void)checkMap:(NSString *)name toController:(Class)controllerClass withOptions:(UPRouterOptions *)options;
+
+- (BOOL)guarantee:(NSArray*)checkList;
+
 ///-------------------------------
 /// @name Opening URLs
 ///-------------------------------
@@ -366,4 +369,5 @@ typedef void (^RouterOpenCallback)(NSDictionary *params);
 + (instancetype)newRouter;
 
 @end
+
 

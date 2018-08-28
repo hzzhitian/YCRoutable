@@ -291,11 +291,21 @@ andCheckList:(NSArray*)checkList
     [self open:url animated:animated extraParams:nil];
 }
 
-- (void)open:(NSString *)url
-    animated:(BOOL)animated
- extraParams:(NSDictionary *)extraParams
+- (BOOL)guarantee:(NSArray*)checkList
 {
-    RouterParams *params = [self routerParamsForUrl:url extraParams: extraParams];
+    RouterParams *checkParams = [self checkForList:checkList];
+    
+    if(checkParams) {
+        [self doIt:checkParams animated:YES];
+        return NO;
+    } else {
+        return YES;
+    }
+    
+}
+
+- (void)doIt:(RouterParams *)params animated:(BOOL)animated
+{
     UPRouterOptions *options = params.routerOptions;
     
     if (options.callback) {
@@ -351,6 +361,16 @@ andCheckList:(NSArray*)checkList
         [self.navigationController pushViewController:controller animated:animated];
     }
 }
+
+- (void)open:(NSString *)url
+    animated:(BOOL)animated
+ extraParams:(NSDictionary *)extraParams
+{
+    RouterParams *params = [self routerParamsForUrl:url extraParams: extraParams];
+    
+    [self doIt:params animated:animated];
+    
+}
 - (NSDictionary*)paramsOfUrl:(NSString*)url {
     return [[self routerParamsForUrl:url] controllerParams];
 }
@@ -372,6 +392,36 @@ andCheckList:(NSArray*)checkList
 }
 
 ///////
+- (RouterParams *)checkForList:(NSArray *)checkList
+{
+    if(!checkList)
+        return nil;
+    
+    for(NSString *itemKey in checkList) {
+        UPRouterOptions *checkOptions = self.checks[itemKey];
+        
+        if(!checkOptions)
+            continue;
+        
+        id checkRlt = [checkOptions.openClass performSelector:NSSelectorFromString(itemKey)];
+        
+        if([checkRlt boolValue]) {
+            continue;
+        } else {
+            
+            NSDictionary *givenParams = @{@"suc_route_block":^{}};
+            
+            RouterParams *openParams = [[RouterParams alloc] initWithRouterOptions:checkOptions
+                                                                        openParams:givenParams
+                                                                       extraParams:nil];
+            return openParams;
+        }
+        
+    }
+    
+    return nil;
+}
+
 - (RouterParams *)checkForList:(NSArray *)checkList withTargetUrl:(NSString*)targetUrl extraParams:(NSDictionary*)extraParams
 {
     if(!checkList)
@@ -543,4 +593,5 @@ andCheckList:(NSArray*)checkList
 }
 
 @end
+
 
